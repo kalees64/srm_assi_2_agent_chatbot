@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+python-dotenv
+langchain
+langchain-openai
+jinja2
+pydantic
+pydantic-settings

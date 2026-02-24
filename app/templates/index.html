@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  </head>
+  <body>
+    <div class="sidebar">
+      <div class="logo"><i class="fas fa-terminal"></i> VK64</div>
+      <button class="new-chat-btn" onclick="startNewChat()">
+        <i class="fas fa-plus"></i> New Chat
+      </button>
+      <div class="chat-history" id="chat-history">
+        <!-- History items will be injected here -->
+      </div>
+    </div>
+
+    <main class="main-container">
+      <div class="bg-blob blob-1"></div>
+      <div class="bg-blob blob-2"></div>
+
+      <header>
+        <div class="header-info">
+          <h1 style="font-size: 1rem; color: var(--text-muted)">
+            Architect Mode <span style="color: var(--primary)">● Active</span>
+          </h1>
+        </div>
+      </header>
+
+      <div id="chat-display">
+        <div class="bot-message message">
+          Hello! I am <strong>VK64</strong>, your Expert Software Engineering AI
+          Assistant. I specialize in system design, performance optimization,
+          and mathematical problem-solving. <br /><br />
+          What architectural challenge shall we solve today?
+        </div>
+      </div>
+
+      <div class="input-container">
+        <div class="input-wrapper">
+          <textarea
+            id="user-input"
+            placeholder="Type your software engineering query..."
+            rows="1"
+            oninput="autoResize(this)"
+          ></textarea>
+          <button class="send-btn" onclick="sendMessage()" id="send-button">
+            <i class="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const chatDisplay = document.getElementById("chat-display");
+      const userInput = document.getElementById("user-input");
+      const historyList = document.getElementById("chat-history");
+      let chatHistory =
+        JSON.parse(localStorage.getItem("se_chat_history")) || [];
+
+      function autoResize(el) {
+        el.style.height = "auto";
+        el.style.height = el.scrollHeight + "px";
+      }
+
+      function renderHistory() {
+        historyList.innerHTML = "";
+        chatHistory
+          .slice()
+          .reverse()
+          .forEach((chat, index) => {
+            const div = document.createElement("div");
+            div.className = "history-item";
+            div.innerHTML = `<i class="far fa-message"></i> ${chat.title}`;
+            div.onclick = () => loadChat(chatHistory.length - 1 - index);
+            historyList.appendChild(div);
+          });
+      }
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        // Add user message to UI
+        addMessage(message, "user");
+        userInput.value = "";
+        userInput.style.height = "auto";
+
+        // Show loading state
+        const loadingId = addMessage("Thinking...", "bot", true);
+
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+
+          const data = await response.json();
+
+          // Update bot message
+          updateMessage(loadingId, data.response);
+
+          // Update history if first message
+          if (
+            chatHistory.length === 0 ||
+            chatHistory[chatHistory.length - 1].messages.length > 10
+          ) {
+            saveToHistory(message);
+          } else {
+            chatHistory[chatHistory.length - 1].messages.push({
+              role: "user",
+              content: message,
+            });
+            chatHistory[chatHistory.length - 1].messages.push({
+              role: "bot",
+              content: data.response,
+            });
+            localStorage.setItem(
+              "se_chat_history",
+              JSON.stringify(chatHistory),
+            );
+          }
+        } catch (error) {
+          console.error("Chat Error:", error);
+          updateMessage(
+            loadingId,
+            "Error: Could not reach the server. Please check your connection.",
+          );
+        }
+      }
+
+      function addMessage(text, role, isLoading = false) {
+        const div = document.createElement("div");
+        const id = "msg-" + Date.now();
+        div.id = id;
+        div.className = `message ${role}-message`;
+        div.innerHTML = isLoading ? text : marked.parse(text);
+        chatDisplay.appendChild(div);
+        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        return id;
+      }
+
+      function updateMessage(id, text) {
+        const div = document.getElementById(id);
+        div.innerHTML = marked.parse(text);
+        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+      }
+
+      function saveToHistory(firstMsg) {
+        const newChat = {
+          title: firstMsg.substring(0, 30) + "...",
+          messages: [{ role: "user", content: firstMsg }],
+        };
+        chatHistory.push(newChat);
+        localStorage.setItem("se_chat_history", JSON.stringify(chatHistory));
+        renderHistory();
+      }
+
+      function startNewChat() {
+        chatDisplay.innerHTML = `
+                <div class="bot-message message">
+                    A new session has started. Designing something new? I'm ready.
+                </div>`;
+        // Optional: logic to start a fresh array in local storage
+      }
+
+      function loadChat(index) {
+        const chat = chatHistory[index];
+        chatDisplay.innerHTML = "";
+        chat.messages.forEach((msg) => {
+          addMessage(msg.content, msg.role);
+        });
+      }
+
+      // Initial render
+      renderHistory();
+
+      // Enter key to send
+      userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    </script>
+  </body>
+</html>
