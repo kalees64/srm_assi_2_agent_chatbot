@@ -12,7 +12,11 @@ This project implements **VK64**, a Software Engineering Expert AI Assistant usi
 - **Frontend**: Vanilla HTML/CSS/JS with modern glassmorphism design.
 - **Environment**: `.env` for secret management.
 
-## 3. Prompt Design Strategy
+## 3. GitHub Repository
+
+- **URL**: [https://github.com/kalees64/srm_assi_2_agent_chatbot](https://github.com/kalees64/srm_assi_2_agent_chatbot)
+
+## 4. Prompt Design Strategy
 
 The system prompt is engineered with:
 
